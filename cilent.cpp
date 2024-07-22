@@ -7,6 +7,7 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <unordered_map>
+#include "frame_processor.hpp"
 
 enum MessageType {
     STRING_MSG = 0x0000,
@@ -43,7 +44,7 @@ class Application {
 public:
     unsigned char* receive_and_decode(MessageBuffer& message);
 
-    cv::Mat handle_image_msg(MessageBuffer& buffer);
+    cv::Mat handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor);
     std::string handle_string_msg(MessageBuffer& buffer);
 private:
     std::unordered_map<unsigned int, std::vector<unsigned char>> data_temp;
@@ -86,14 +87,15 @@ std::string Application::handle_string_msg(MessageBuffer& buffer) {
     return std::string(reinterpret_cast<char*>(buffer.Data), buffer.DataLength);
 }
 
-cv::Mat Application::handle_image_msg(MessageBuffer& buffer) {
+cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor) {
     unsigned char* data = receive_and_decode(buffer);
     if (data != nullptr) {
         std::vector<unsigned char> img_data(data, data + buffer.DataTotalLength);
         cv::Mat img = cv::imdecode(img_data, cv::IMREAD_COLOR);
         std::string cnt=std::to_string(buffer.DataID);
         cnt.append(".jpg");
-        cv::imwrite(cnt,img);
+        // cv::imwrite(cnt,img);
+        FrameProcessor.processFrame(img);
         std::cout<<"Saved "<<cnt<<std::endl;
         delete[] data;
 
@@ -107,6 +109,7 @@ cv::Mat Application::handle_image_msg(MessageBuffer& buffer) {
 }
 
 int main() {
+    FrameProcessor processor;
     // Create a socket
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket == -1) {
@@ -141,7 +144,7 @@ int main() {
         unsigned char recvBuffer[10240] = {0};
         // std::cout<<"Connected to server."<<std::endl;
         ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer)-completeMessageBuffer.size(), 0);
-        std::cout<<"Recved package."<<std::endl;
+        // std::cout<<"Recved package."<<std::endl;
         if (bytesRead == -1) {
             std::cerr << "Failed to receive message from server." << std::endl;
             close(clientSocket);
@@ -155,9 +158,9 @@ int main() {
         }
 
         completeMessageBuffer.insert(completeMessageBuffer.end(), recvBuffer, recvBuffer + bytesRead);
-        std::cout<<"Received "<<bytesRead<<" bytes."<<std::endl;
-        std::cout<<"Buffer size: "<<completeMessageBuffer.size()<<std::endl;
-        std::cout<<"Message size: "<<sizeof(MessageBuffer)<<std::endl;
+        // std::cout<<"Received "<<bytesRead<<" bytes."<<std::endl;
+        // std::cout<<"Buffer size: "<<completeMessageBuffer.size()<<std::endl;
+        // std::cout<<"Message size: "<<sizeof(MessageBuffer)<<std::endl;
 
         while (completeMessageBuffer.size() >= sizeof(MessageBuffer)) {
             MessageBuffer receivedMessage;
@@ -172,8 +175,8 @@ int main() {
             
 
             if (receivedMessage.MessageType == IMAGE_MSG) {
-                std::cout<<"recieved image message."<<std::endl;
-                cv::Mat img = app.handle_image_msg(receivedMessage);
+                // std::cout<<"recieved image message."<<std::endl;
+                cv::Mat img = app.handle_image_msg(receivedMessage, processor);
                 if (!img.empty()) {
                     // cv::imshow("Image", img);
                     cv::waitKey(1);
