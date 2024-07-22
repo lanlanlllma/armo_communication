@@ -3,6 +3,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
+#include <string>
+#include <vector>
+#include <opencv2/opencv.hpp>
+#include <unordered_map>
 
 enum MessageType {
     STRING_MSG = 0x0000,
@@ -34,6 +38,15 @@ void serializeMessage(const MessageBuffer& message, unsigned char* buffer) {
     memcpy(buffer + 20 + message.DataLength, &message.End, sizeof(message.End));
 }
 
+class Application {
+public:
+    unsigned char* receive_and_decode(MessageBuffer& message);
+
+    cv::Mat handle_image_msg(MessageBuffer& buffer);
+private:
+    std::unordered_map<unsigned int, std::vector<unsigned char>> data_temp ;
+};
+
 void deserializeMessage(unsigned char* buffer, MessageBuffer& message) {
     memcpy(&message.Start, buffer, sizeof(message.Start));
     memcpy(&message.MessageType, buffer + 2, sizeof(message.MessageType));
@@ -43,6 +56,43 @@ void deserializeMessage(unsigned char* buffer, MessageBuffer& message) {
     memcpy(&message.DataLength, buffer + 16, sizeof(message.DataLength));
     memcpy(&message.Data, buffer + 20, message.DataLength);
     memcpy(&message.End, buffer + 20 + message.DataLength, sizeof(message.End));
+}
+
+unsigned char* Application::receive_and_decode(MessageBuffer& message) {
+    unsigned int offset = message.Offset;
+    unsigned int length = message.DataLength;
+    unsigned int total_length = message.DataTotalLength;
+    unsigned int dataID = message.DataID;
+
+    if (data_temp.find(dataID) == data_temp.end()) {
+        data_temp[dataID] = std::vector<unsigned char>(total_length);
+    }
+
+    std::memcpy(data_temp[dataID].data() + offset, message.Data, length);
+
+    if (offset + length == total_length) {
+        unsigned char* data = new unsigned char[total_length];
+        std::memcpy(data, data_temp[dataID].data(), total_length);
+        data_temp.erase(dataID);
+        return data;
+    } else {
+        return nullptr;
+    }
+}
+
+cv::Mat Application::handle_image_msg(MessageBuffer& buffer) {
+    unsigned char* data = receive_and_decode(buffer);
+    if (data != nullptr) {
+        std::vector<unsigned char> img_data(data, data + buffer.DataTotalLength);
+        cv::Mat img = cv::imdecode(img_data, cv::IMREAD_COLOR);
+        delete[] data;
+
+        // 使用 FrameProcessor 处理图像
+
+        // 获取处理结果
+        return img;
+    }
+    return cv::Mat();
 }
 
 int main() {
@@ -56,8 +106,8 @@ int main() {
     // Set up the server address and port
     sockaddr_in serverAddress{};
     serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(8080);  // Replace with the actual server port
-    if (inet_pton(AF_INET, "127.0.0.1", &(serverAddress.sin_addr)) <= 0) {
+    serverAddress.sin_port = htons(8000);  // Replace with the actual server port
+    if (inet_pton(AF_INET, "10.2.20.66", &(serverAddress.sin_addr)) <= 0) {
         std::cerr << "Invalid address/Address not supported." << std::endl;
         return 1;
     }
@@ -67,57 +117,30 @@ int main() {
         std::cerr << "Connection failed." << std::endl;
         return 1;
     }
-
+    Application app;
     // Send and receive messages in a loop
     while (true) {
-        std::string sendMessage;
-        std::cout << "Enter message to send: ";
-        std::getline(std::cin, sendMessage);
-
-        // Prepare the MessageBuffer
-        MessageBuffer message{};
-        message.Start = 0x0D00;
-        message.MessageType = MessageType::STRING_MSG ; // Example type
-        message.DataID = 1; // Example ID
-        message.DataTotalLength = sendMessage.length();
-        message.Offset = 0;
-        message.DataLength = sendMessage.length();
-        memcpy(message.Data, sendMessage.c_str(), sendMessage.length());
-        message.End = 0x0721;
-
-        // Serialize the message
-        unsigned char buffer[10240];
-        serializeMessage(message, buffer);
-
-        // Send the message
-        if (send(clientSocket, buffer, 20 + message.DataLength + 2, 0) < 0) {
-            std::cerr << "Failed to send message." << std::endl;
-            break;
-        }
-
-        // Receive a response from the server
         unsigned char recvBuffer[10240] = {0};
-        int bytesReceived = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
-        if (bytesReceived < 0) {
-            std::cerr << "Failed to receive response." << std::endl;
-            break;
-        }
+            ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+            if (bytesRead == -1) {
+                std::cerr << "Failed to receive message from client." << std::endl;
+                close(clientSocket);
+                break;
+            }
 
-        // Deserialize the response
-        MessageBuffer response;
-        deserializeMessage(recvBuffer, response);
+            if (bytesRead == 0) {
+                std::cout << "Client disconnected." << std::endl;
+                close(clientSocket);
+                break;
+            }
+            MessageBuffer receivedMessage;
+            deserializeMessage(recvBuffer, receivedMessage);
+            if(receivedMessage.MessageType == IMAGE_MSG){
+                cv::Mat img = app.Application::handle_image_msg(receivedMessage);
+                cv::imshow("Image", img);
+                cv::waitKey(1);
+            }
 
-        std::cout << "Server response: ";
-        std::cout.write(reinterpret_cast<char*>(response.Data), response.DataLength);
-        std::cout << std::endl;
-
-        // Optionally, add an exit condition to break the loop
-        if (sendMessage == "exit") {
-            break;
-        }
-
-        // Sleep for a while before sending the next message
-        sleep(1);
     }
 
     // Close the socket
