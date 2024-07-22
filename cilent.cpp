@@ -135,7 +135,9 @@ int main() {
     // Send and receive messages in a loop
     while (true) {
         unsigned char recvBuffer[10240] = {0};
+        // std::cout<<"Connected to server."<<std::endl;
         ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+        std::cout<<"Recved package."<<std::endl;
         if (bytesRead == -1) {
             std::cerr << "Failed to receive message from server." << std::endl;
             close(clientSocket);
@@ -147,16 +149,23 @@ int main() {
             close(clientSocket);
             break;
         }
+
         completeMessageBuffer.insert(completeMessageBuffer.end(), recvBuffer, recvBuffer + bytesRead);
-        if (std::find(completeMessageBuffer.begin(), completeMessageBuffer.end(), END_SYMBOL) != completeMessageBuffer.end()) {
-            // 找到结束符号，处理完整消息
+        std::cout<<"Received "<<bytesRead<<" bytes."<<std::endl;
+        std::cout<<"Buffer size: "<<completeMessageBuffer.size()<<std::endl;
+        std::cout<<"Message size: "<<sizeof(MessageBuffer)<<std::endl;
+
+        while (completeMessageBuffer.size() >= sizeof(MessageBuffer)) {
             MessageBuffer receivedMessage;
             deserializeMessage(completeMessageBuffer.data(), receivedMessage);
-            
-            // 清空缓冲区以准备接收新的消息
+
+            size_t messageSize = sizeof(MessageBuffer) - sizeof(receivedMessage.Data) + receivedMessage.DataLength;
+            if (completeMessageBuffer.size() < messageSize) {
+                break;
+            }
+
             completeMessageBuffer.clear();
             
-            // 根据需要处理receivedMessage
 
             if (receivedMessage.MessageType == IMAGE_MSG) {
                 cv::Mat img = app.handle_image_msg(receivedMessage);
@@ -164,12 +173,12 @@ int main() {
                     cv::imshow("Image", img);
                     cv::waitKey(1);
                 }
-            }
-            else if(receivedMessage.MessageType==STRING_MSG){
+            } else if (receivedMessage.MessageType == STRING_MSG) {
                 std::string str = app.handle_string_msg(receivedMessage);
                 std::cout << "Received string message: " << str << std::endl;
             }
         }
+
     }
     // Close the socket
     close(clientSocket);
