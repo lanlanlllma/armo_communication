@@ -15,6 +15,7 @@ enum MessageType {
     TRANSFORM = 0x1981,
     TRANSFORM_REQUEST = 0x1982
 };
+const unsigned short END_SYMBOL = 0x0721;
 
 struct MessageBuffer {
     unsigned short Start;                     // 0x0D00
@@ -125,9 +126,12 @@ int main() {
         close(clientSocket);
         return 1;
     }
+    else{
+        std::cout<<"Connected to server."<<std::endl;
+    }
 
     Application app;
-
+    std::vector<unsigned char> completeMessageBuffer;
     // Send and receive messages in a loop
     while (true) {
         unsigned char recvBuffer[10240] = {0};
@@ -143,20 +147,28 @@ int main() {
             close(clientSocket);
             break;
         }
+        completeMessageBuffer.insert(completeMessageBuffer.end(), recvBuffer, recvBuffer + bytesRead);
+        if (std::find(completeMessageBuffer.begin(), completeMessageBuffer.end(), END_SYMBOL) != completeMessageBuffer.end()) {
+            // 找到结束符号，处理完整消息
+            MessageBuffer receivedMessage;
+            deserializeMessage(completeMessageBuffer.data(), receivedMessage);
+            
+            // 清空缓冲区以准备接收新的消息
+            completeMessageBuffer.clear();
+            
+            // 根据需要处理receivedMessage
 
-        MessageBuffer receivedMessage;
-        deserializeMessage(recvBuffer, receivedMessage);
-
-        if (receivedMessage.MessageType == IMAGE_MSG) {
-            cv::Mat img = app.handle_image_msg(receivedMessage);
-            if (!img.empty()) {
-                cv::imshow("Image", img);
-                cv::waitKey(1);
+            if (receivedMessage.MessageType == IMAGE_MSG) {
+                cv::Mat img = app.handle_image_msg(receivedMessage);
+                if (!img.empty()) {
+                    cv::imshow("Image", img);
+                    cv::waitKey(1);
+                }
             }
-        }
-        else if(receivedMessage.MessageType==STRING_MSG){
-            std::string str = app.handle_string_msg(receivedMessage);
-            std::cout << "Received string message: " << str << std::endl;
+            else if(receivedMessage.MessageType==STRING_MSG){
+                std::string str = app.handle_string_msg(receivedMessage);
+                std::cout << "Received string message: " << str << std::endl;
+            }
         }
     }
     // Close the socket
