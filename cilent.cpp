@@ -43,8 +43,9 @@ public:
     unsigned char* receive_and_decode(MessageBuffer& message);
 
     cv::Mat handle_image_msg(MessageBuffer& buffer);
+    std::string handle_string_msg(MessageBuffer& buffer);
 private:
-    std::unordered_map<unsigned int, std::vector<unsigned char>> data_temp ;
+    std::unordered_map<unsigned int, std::vector<unsigned char>> data_temp;
 };
 
 void deserializeMessage(unsigned char* buffer, MessageBuffer& message) {
@@ -80,6 +81,10 @@ unsigned char* Application::receive_and_decode(MessageBuffer& message) {
     }
 }
 
+std::string Application::handle_string_msg(MessageBuffer& buffer) {
+    return std::string(reinterpret_cast<char*>(buffer.Data), buffer.DataLength);
+}
+
 cv::Mat Application::handle_image_msg(MessageBuffer& buffer) {
     unsigned char* data = receive_and_decode(buffer);
     if (data != nullptr) {
@@ -87,9 +92,10 @@ cv::Mat Application::handle_image_msg(MessageBuffer& buffer) {
         cv::Mat img = cv::imdecode(img_data, cv::IMREAD_COLOR);
         delete[] data;
 
-        // 使用 FrameProcessor 处理图像
+        // Use FrameProcessor to process the image (assuming FrameProcessor is defined elsewhere)
+        // FrameProcessor.process(img);
 
-        // 获取处理结果
+        // Get processing result
         return img;
     }
     return cv::Mat();
@@ -109,40 +115,50 @@ int main() {
     serverAddress.sin_port = htons(8000);  // Replace with the actual server port
     if (inet_pton(AF_INET, "10.2.20.66", &(serverAddress.sin_addr)) <= 0) {
         std::cerr << "Invalid address/Address not supported." << std::endl;
+        close(clientSocket);
         return 1;
     }
 
     // Connect to the server
     if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
         std::cerr << "Connection failed." << std::endl;
+        close(clientSocket);
         return 1;
     }
+
     Application app;
+
     // Send and receive messages in a loop
     while (true) {
         unsigned char recvBuffer[10240] = {0};
-            ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
-            if (bytesRead == -1) {
-                std::cerr << "Failed to receive message from client." << std::endl;
-                close(clientSocket);
-                break;
-            }
+        ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+        if (bytesRead == -1) {
+            std::cerr << "Failed to receive message from server." << std::endl;
+            close(clientSocket);
+            break;
+        }
 
-            if (bytesRead == 0) {
-                std::cout << "Client disconnected." << std::endl;
-                close(clientSocket);
-                break;
-            }
-            MessageBuffer receivedMessage;
-            deserializeMessage(recvBuffer, receivedMessage);
-            if(receivedMessage.MessageType == IMAGE_MSG){
-                cv::Mat img = app.Application::handle_image_msg(receivedMessage);
+        if (bytesRead == 0) {
+            std::cout << "Server disconnected." << std::endl;
+            close(clientSocket);
+            break;
+        }
+
+        MessageBuffer receivedMessage;
+        deserializeMessage(recvBuffer, receivedMessage);
+
+        if (receivedMessage.MessageType == IMAGE_MSG) {
+            cv::Mat img = app.handle_image_msg(receivedMessage);
+            if (!img.empty()) {
                 cv::imshow("Image", img);
                 cv::waitKey(1);
             }
-
+        }
+        else if(receivedMessage.MessageType==STRING_MSG){
+            std::string str = app.handle_string_msg(receivedMessage);
+            std::cout << "Received string message: " << str << std::endl;
+        }
     }
-
     // Close the socket
     close(clientSocket);
 
