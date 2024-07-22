@@ -72,7 +72,7 @@ unsigned char* Application::receive_and_decode(MessageBuffer& message) {
 
     std::memcpy(data_temp[dataID].data() + offset, message.Data, length);
 
-    if (offset + length == total_length) {
+    if (offset + length >= total_length) {
         unsigned char* data = new unsigned char[total_length];
         std::memcpy(data, data_temp[dataID].data(), total_length);
         data_temp.erase(dataID);
@@ -91,6 +91,10 @@ cv::Mat Application::handle_image_msg(MessageBuffer& buffer) {
     if (data != nullptr) {
         std::vector<unsigned char> img_data(data, data + buffer.DataTotalLength);
         cv::Mat img = cv::imdecode(img_data, cv::IMREAD_COLOR);
+        std::string cnt=std::to_string(buffer.DataID);
+        cnt.append(".jpg");
+        cv::imwrite(cnt,img);
+        std::cout<<"Saved "<<cnt<<std::endl;
         delete[] data;
 
         // Use FrameProcessor to process the image (assuming FrameProcessor is defined elsewhere)
@@ -136,7 +140,7 @@ int main() {
     while (true) {
         unsigned char recvBuffer[10240] = {0};
         // std::cout<<"Connected to server."<<std::endl;
-        ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+        ssize_t bytesRead = recv(clientSocket, recvBuffer, sizeof(recvBuffer)-completeMessageBuffer.size(), 0);
         std::cout<<"Recved package."<<std::endl;
         if (bytesRead == -1) {
             std::cerr << "Failed to receive message from server." << std::endl;
@@ -168,9 +172,10 @@ int main() {
             
 
             if (receivedMessage.MessageType == IMAGE_MSG) {
+                std::cout<<"recieved image message."<<std::endl;
                 cv::Mat img = app.handle_image_msg(receivedMessage);
                 if (!img.empty()) {
-                    cv::imshow("Image", img);
+                    // cv::imshow("Image", img);
                     cv::waitKey(1);
                 }
             } else if (receivedMessage.MessageType == STRING_MSG) {
