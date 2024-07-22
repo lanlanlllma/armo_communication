@@ -43,8 +43,10 @@ void serializeMessage(const MessageBuffer& message, unsigned char* buffer) {
 class Application {
 public:
     unsigned char* receive_and_decode(MessageBuffer& message);
+    void encode_and_send(unsigned char* buffer, int clientSocket, MessageBuffer &message) ;
+        
 
-    cv::Mat handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor);
+    cv::Mat handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor,int cilentSocket);
     std::string handle_string_msg(MessageBuffer& buffer);
 private:
     std::unordered_map<unsigned int, std::vector<unsigned char>> data_temp;
@@ -83,11 +85,24 @@ unsigned char* Application::receive_and_decode(MessageBuffer& message) {
     }
 }
 
+void Application::encode_and_send(unsigned char* buffer, int clientSocket, MessageBuffer &message) {
+    serializeMessage(message, buffer);
+    ssize_t sendsat=send(clientSocket, buffer, sizeof(MessageBuffer), 0);
+    if (sendsat == -1) {
+        std::cerr << "Failed to send message to server." << std::endl;
+        close(clientSocket);
+    }
+    // std::cout<<"Sent package."<<std::endl;
+
+}
+
+
+
 std::string Application::handle_string_msg(MessageBuffer& buffer) {
     return std::string(reinterpret_cast<char*>(buffer.Data), buffer.DataLength);
 }
 
-cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor) {
+cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor,int cilentSocket) {
     unsigned char* data = receive_and_decode(buffer);
     if (data != nullptr) {
         std::vector<unsigned char> img_data(data, data + buffer.DataTotalLength);
@@ -98,10 +113,21 @@ cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& Fra
         FrameProcessor.processFrame(img);
         std::cout<<"Saved "<<cnt<<std::endl;
         delete[] data;
-
-        // Use FrameProcessor to process the image (assuming FrameProcessor is defined elsewhere)
-        // FrameProcessor.process(img);
-
+        // send back summary
+        MessageBuffer message;
+        size_t firstPartSize = FrameProcessor.summary[0][FrameProcessor.fcount].size();
+        size_t secondPartSize = FrameProcessor.summary[1][FrameProcessor.fcount].size();
+        memcpy(message.Data, FrameProcessor.summary[0][FrameProcessor.fcount].data(), firstPartSize);
+        memcpy(message.Data + firstPartSize, FrameProcessor.summary[1][FrameProcessor.fcount].data(), secondPartSize);
+        message.Start = 0x0D00;
+        message.MessageType = STRING_MSG;
+        message.DataID = buffer.DataID;
+        message.DataTotalLength = 0;
+        message.Offset = 0;
+        message.DataLength = 0;
+        message.End = 0x0721;
+        unsigned char buffer[sizeof(MessageBuffer)];
+        encode_and_send(buffer,cilentSocket,message);
         // Get processing result
         return img;
     }
@@ -176,7 +202,7 @@ int main() {
 
             if (receivedMessage.MessageType == IMAGE_MSG) {
                 // std::cout<<"recieved image message."<<std::endl;
-                cv::Mat img = app.handle_image_msg(receivedMessage, processor);
+                cv::Mat img = app.handle_image_msg(receivedMessage, processor,clientSocket);
                 if (!img.empty()) {
                     // cv::imshow("Image", img);
                     cv::waitKey(1);
