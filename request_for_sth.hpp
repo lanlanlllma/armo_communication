@@ -122,19 +122,9 @@ std::string Application::handle_string_msg(MessageBuffer& buffer) {
 }
 
 // request for camera info
-void getCamInfo(sockaddr_in serverAddress,FrameProcessor processor){
+void getCamInfo(int clientSocket,FrameProcessor processor){
     double cameraMatrix[9];
     double distCoeffs[5];
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == -1) {
-        std::cerr << "Failed to create socket." << std::endl;
-        return;
-    }
-    if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
-        std::cerr << "Failed to connect to server." << std::endl;
-        close(clientSocket);
-        return;
-    }
     std::vector<unsigned char> completeMessageBuffer;
     while (true) {
         unsigned char recvBuffer[10240] = {0};
@@ -174,7 +164,7 @@ void getCamInfo(sockaddr_in serverAddress,FrameProcessor processor){
             std::memcpy(cameraMatrix, cameraInfo.CameraMatrix, sizeof(cameraInfo.CameraMatrix));
             std::memcpy(distCoeffs, cameraInfo.DistortionCoefficients, sizeof(cameraInfo.DistortionCoefficients));
             std::cout << "Received camera info." << std::endl;
-            break;
+            return;
         }
         }
         // put into mat
@@ -185,17 +175,20 @@ void getCamInfo(sockaddr_in serverAddress,FrameProcessor processor){
 }
 
 // request for transform
-void getTransform(sockaddr_in serverAddress, std::string from, std::string to, double translation[] , double rotation[],Application app){
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == -1) {
-        std::cerr << "Failed to create socket." << std::endl;
-        return;
-    }
-    if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
-        std::cerr << "Failed to connect to server." << std::endl;
-        close(clientSocket);
-        return;
-    }
+void getTransform(int clientSocket, std::string from, std::string to, double translation[] , double rotation[],Application app){
+    MessageBuffer sendbuffer;
+    TransformRequestData data;
+    sendbuffer.Data[10218]={0};
+    sendbuffer.Start=0x0D00;
+    sendbuffer.MessageType=MessageType::TRANSFORM_REQUEST;
+    std::memcpy(data.From, from.c_str(), from.size());
+    std::memcpy(data.To, to.c_str(), to.size());
+    sendbuffer.DataLength = sizeof(data);
+    std::memcpy(sendbuffer.Data, &data, sendbuffer.DataLength);
+    sendbuffer.DataTotalLength = sendbuffer.DataLength;
+    sendbuffer.End=0x0721;
+    encode_and_send(clientSocket,sendbuffer);
+
     std::vector<unsigned char> completeMessageBuffer;
     while (true) {
         unsigned char recvBuffer[10240] = {0};
