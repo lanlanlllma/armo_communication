@@ -22,21 +22,6 @@ cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& Fra
         FrameProcessor.processFrame(img);
         std::cout<<"Saved "<<cnt<<std::endl;
         delete[] data;
-        // send back summary
-        MessageBuffer message;
-        size_t firstPartSize = FrameProcessor.summary[0][FrameProcessor.fcount].size();
-        size_t secondPartSize = FrameProcessor.summary[1][FrameProcessor.fcount].size();
-        memcpy(message.Data, FrameProcessor.summary[0][FrameProcessor.fcount].data(), firstPartSize);
-        memcpy(message.Data + firstPartSize, FrameProcessor.summary[1][FrameProcessor.fcount].data(), secondPartSize);
-        message.Start = 0x0D00;
-        message.MessageType = STRING_MSG;
-        message.DataID = buffer.DataID;
-        message.DataTotalLength = 0;
-        message.Offset = 0;
-        message.DataLength = 0;
-        message.End = 0x0721;
-        unsigned char buffer[sizeof(MessageBuffer)];
-        encode_and_send(buffer,cilentSocket,message);
         // Get processing result
         return img;
     }
@@ -116,12 +101,12 @@ int main() {
                     // cv::imshow("Image", img);
                     cv::waitKey(1);
                 }
-            } else if (receivedMessage.MessageType == STRING_MSG) {
+            } 
+            else if (receivedMessage.MessageType == STRING_MSG) {
                 std::string str = app.handle_string_msg(receivedMessage);
                 std::cout << "Received string message: " << str << std::endl;
             }
         }
-
     }
     // Close the socket
     close(clientSocket);

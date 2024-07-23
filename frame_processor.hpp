@@ -24,6 +24,8 @@ public:
     int fcount;
     int missed_frames;
     int max_missed_frames;
+    cv::Mat cameraMatrix;
+    cv::Mat distCoeffs;
 
 private:
     cv::Mat result_img;

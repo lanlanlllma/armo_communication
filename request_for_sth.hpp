@@ -100,7 +100,8 @@ unsigned char* Application::receive_and_decode(MessageBuffer& message) {
     }
 }
 
-void Application::encode_and_send(unsigned char* buffer, int clientSocket, MessageBuffer &message) {
+void encode_and_send(int clientSocket, MessageBuffer &message) {
+    unsigned char* buffer[10240]={0};
     serializeMessage(message, buffer);
     ssize_t sendsat=send(clientSocket, buffer, sizeof(MessageBuffer), 0);
     if (sendsat == -1) {
@@ -114,11 +115,14 @@ void Application::encode_and_send(unsigned char* buffer, int clientSocket, Messa
 
 
 std::string Application::handle_string_msg(MessageBuffer& buffer) {
-    return std::string(reinterpret_cast<char*>(buffer.Data), buffer.DataLength);
+    unsigned char* data = receive_and_decode(buffer);
+    if(data !=nullptr){
+        return std::string(reinterpret_cast<char*>(buffer.Data), buffer.DataLength);
+    }
 }
 
 // request for camera info
-void getCamInfo(sockaddr_in serverAddress,cv::Mat cameraMatrix, cv::Mat distCoeffs){
+void getCamInfo(sockaddr_in serverAddress,FrameProcessor processor){
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket == -1) {
         std::cerr << "Failed to create socket." << std::endl;
@@ -172,13 +176,14 @@ void getCamInfo(sockaddr_in serverAddress,cv::Mat cameraMatrix, cv::Mat distCoef
         }
         }
         // put into mat
-        cameraMatrix= cv::Mat(3, 3, CV_64F, cameraMatrix.data);
-        distCoeffs= cv::Mat(1, 5, CV_64F, distCoeffs.data);
+        cv::Mat cameramatrix= cv::Mat(3, 3, CV_64F, cameraMatrix.data);
+        cv::Mat distcoeffs= cv::Mat(1, 5, CV_64F, distCoeffs.data);
+        processor.setCameraMatrix(cameramatrix,distcoeffs);
     }
 }
 
 // request for transform
-void getTransform(sockaddr_in serverAddress, std::string from, std::string to, cv::Mat& translation, cv::Mat& rotation){
+void getTransform(sockaddr_in serverAddress, std::string from, std::string to, double translation[] , double rotation[],Application app){
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket == -1) {
         std::cerr << "Failed to create socket." << std::endl;
@@ -207,5 +212,64 @@ void getTransform(sockaddr_in serverAddress, std::string from, std::string to, c
             break;
         }
         while(true){
+            completeMessageBuffer.insert(completeMessageBuffer.end(), recvBuffer, recvBuffer + bytesRead);
+            // std::cout<<"Received "<<bytesRead<<" bytes."<<std::endl;
+            // std::cout<<"Buffer size: "<<completeMessageBuffer.size()<<std::endl;
+            // std::cout<<"Message size: "<<sizeof(MessageBuffer)<<std::endl;
 
+            while (completeMessageBuffer.size() >= sizeof(MessageBuffer)) {
+                MessageBuffer receivedMessage;
+                deserializeMessage(completeMessageBuffer.data(), receivedMessage);
+
+                size_t messageSize = sizeof(MessageBuffer) - sizeof(receivedMessage.Data) + receivedMessage.DataLength;
+                if (completeMessageBuffer.size() < messageSize) {
+                    break;
+                }
+
+                completeMessageBuffer.clear();
+                if (receivedMessage.MessageType==TRANSFORM){
+                    TransformData transform;
+                    std::memcpy(&transform, receivedMessage.Data, receivedMessage.DataLength);
+                    std::memcpy(translation, transform.Translation, sizeof(transform.Translation));
+                    std::memcpy(rotation, transform.Rotation, sizeof(transform.Rotation));
+                    return;
+                }
+                else if (receivedMessage.MessageType == STRING_MSG) {
+                    std::string str = app.handle_string_msg(receivedMessage);
+                    std::cout << "Received string message: " << str << std::endl;
+                }
+            }
         }
+    }
+}
+
+void reportsummary(int clientSocket, FrameProcessor processor){
+    // construct msgbuffer to send
+    MessageBuffer sendbuffer;
+    sendbuffer.Data[10218]={0};
+    sendbuffer.Start=0x0D00;
+    sendbuffer.datatype=MessageType::STRING_MSG;
+    sendbuffer.DataID=processor.fcount;
+
+    size_t firstPartSize = processor.summary[0][processor.fcount].size();
+    size_t secondPartSize = processor.summary[1][processor.fcount].size();
+
+    // Ensure message.Data is large enough to hold both parts
+    // This check should be adjusted according to the actual size of message.Data
+    if (message.DataSize >= firstPartSize + secondPartSize) {
+        // Copy the first part
+        memcpy(message.Data, processor.summary[0][processor.fcount].data(), firstPartSize);
+        // Copy the second part, starting right after the first
+        memcpy(message.Data + firstPartSize, processor.summary[1][processor.fcount].data(), secondPartSize);
+    } 
+    else{
+        std::cout<<"Msg too large"<<std::endl;
+    }
+    sendbuffer.DataLength=firstPartSize+secondPartSize;
+    sendbuffer.DataTotalLength=firstPartSize+secondPartSize;
+    sendbuffer.End=0x0721;
+    encode_and_send(clientSocket,sendbuffer);
+
+    
+
+}

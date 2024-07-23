@@ -200,7 +200,7 @@ void processImage(const Mat &img, Mat &drawing, std::vector<std::vector<Point2f>
     }
 }
 
-void processArmorDetection(const cv::Mat &img, std::vector<cv::Mat> &tvec, std::vector<cv::Mat> &rvec, std::vector<std::string> &result)
+void processArmorDetection(const cv::Mat &img, std::vector<cv::Mat> &tvec, std::vector<cv::Mat> &rvec, std::vector<std::string> &result,cv::Mat cameraMatrix,cv::Mat distCoeffs)
 {
     armor::NumberClassifier number_classifier(model_path, label_path, confidence_threshold, ignore_classes);
     std::vector<armor::Armor> armors;

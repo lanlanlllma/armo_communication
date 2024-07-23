@@ -10,7 +10,10 @@ FrameProcessor::FrameProcessor()
       last_frame(0),
       fcount(0),
       missed_frames(0),
-      max_missed_frames(3) // Set the number of frames to allow predictions
+      max_missed_frames(3), // Set the number of frames to allow predictions
+      cameraMatrix(cv::Mat::zeros(3,3,CV_16F)),
+      distCoeffs(cv::Mat::zeros(1,5,CV_16F))
+
 {
     result_img = cv::Mat::zeros(720, 1280, CV_8UC3);
     summary.resize(2); // Initialize the summary to hold two 2D vectors
@@ -23,7 +26,7 @@ void FrameProcessor::processFrame(cv::Mat &frame) {
     std::vector<std::string> result;
     std::vector<double> poseuler;
 
-    processArmorDetection(frame, tvec, rvec, result);
+    processArmorDetection(frame, tvec, rvec, result,cameraMatrix, distCoeffs);
 
     if (!tvec.empty()) {
         missed_frames = 0;
@@ -115,4 +118,9 @@ void FrameProcessor::processFrame(cv::Mat &frame) {
     predict(x, P, Q);
     cv::circle(result_img, cv::Point(640 + x[1] * 100, 360 - x[0] * 100), 5, cv::Scalar(255, 255, 255), -1);
     cv::imshow("result_img", result_img);
+}
+
+void FrameProcessor::setCameraMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs) {
+    this->cameraMatrix = cameraMatrix;
+    this->distCoeffs = distCoeffs;
 }
