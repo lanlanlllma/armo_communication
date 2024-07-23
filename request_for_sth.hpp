@@ -58,7 +58,6 @@ void serializeMessage(const MessageBuffer& message, unsigned char* buffer) {
 class Application {
 public:
     unsigned char* receive_and_decode(MessageBuffer& message);
-    void encode_and_send(unsigned char* buffer, int clientSocket, MessageBuffer &message) ;
         
 
     cv::Mat handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor,int cilentSocket);

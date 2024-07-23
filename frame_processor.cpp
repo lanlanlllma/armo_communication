@@ -124,3 +124,7 @@ void FrameProcessor::setCameraMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs) {
     this->cameraMatrix = cameraMatrix;
     this->distCoeffs = distCoeffs;
 }
+
+void FrameProcessor::setTransform(double camtranslation[] , double camrotation[],double gimtranslation[] , double gimrotation[]){
+    transform_array = Transform(gimtranslation[0], gimtranslation[1], gimtranslation[2], camrotation[2],camrotation[0],camtranslation[0]);
+}

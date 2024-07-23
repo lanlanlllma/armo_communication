@@ -27,6 +27,7 @@ public:
     cv::Mat cameraMatrix;
     cv::Mat distCoeffs;
     void setCameraMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs);
+    void setTransform(double camtranslation[] , double camrotation[],double gimtranslation[] , double gimrotation[]);
 
 private:
     cv::Mat result_img;

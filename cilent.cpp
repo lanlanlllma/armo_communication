@@ -104,7 +104,9 @@ int main() {
             } 
             else if (receivedMessage.MessageType == STRING_MSG) {
                 std::string str = app.handle_string_msg(receivedMessage);
-                std::cout << "Received string message: " << str << std::endl;
+                if(!str.empty()){
+                    std::cout << "Received string message: " << str << std::endl;
+                }
             }
         }
     }
