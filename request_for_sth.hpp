@@ -101,7 +101,7 @@ unsigned char* Application::receive_and_decode(MessageBuffer& message) {
 }
 
 void encode_and_send(int clientSocket, MessageBuffer &message) {
-    unsigned char* buffer[10240]={0};
+    unsigned char buffer[10240]={0};
     serializeMessage(message, buffer);
     ssize_t sendsat=send(clientSocket, buffer, sizeof(MessageBuffer), 0);
     if (sendsat == -1) {
@@ -119,10 +119,13 @@ std::string Application::handle_string_msg(MessageBuffer& buffer) {
     if(data !=nullptr){
         return std::string(reinterpret_cast<char*>(buffer.Data), buffer.DataLength);
     }
+    return "";
 }
 
 // request for camera info
 void getCamInfo(sockaddr_in serverAddress,FrameProcessor processor){
+    double cameraMatrix[9];
+    double distCoeffs[5];
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket == -1) {
         std::cerr << "Failed to create socket." << std::endl;
@@ -169,15 +172,15 @@ void getCamInfo(sockaddr_in serverAddress,FrameProcessor processor){
         if (receivedMessage.MessageType == CAMERA_INFO) {
             CameraInfoData cameraInfo;
             std::memcpy(&cameraInfo, receivedMessage.Data, receivedMessage.DataLength);
-            std::memcpy(cameraMatrix.data, cameraInfo.CameraMatrix, sizeof(cameraInfo.CameraMatrix));
-            std::memcpy(distCoeffs.data, cameraInfo.DistortionCoefficients, sizeof(cameraInfo.DistortionCoefficients));
+            std::memcpy(cameraMatrix, cameraInfo.CameraMatrix, sizeof(cameraInfo.CameraMatrix));
+            std::memcpy(distCoeffs, cameraInfo.DistortionCoefficients, sizeof(cameraInfo.DistortionCoefficients));
             std::cout << "Received camera info." << std::endl;
             break;
         }
         }
         // put into mat
-        cv::Mat cameramatrix= cv::Mat(3, 3, CV_64F, cameraMatrix.data);
-        cv::Mat distcoeffs= cv::Mat(1, 5, CV_64F, distCoeffs.data);
+        cv::Mat cameramatrix= cv::Mat(3, 3, CV_64F, cameraMatrix);
+        cv::Mat distcoeffs= cv::Mat(1, 5, CV_64F, distCoeffs);
         processor.setCameraMatrix(cameramatrix,distcoeffs);
     }
 }
@@ -248,7 +251,7 @@ void reportsummary(int clientSocket, FrameProcessor processor){
     MessageBuffer sendbuffer;
     sendbuffer.Data[10218]={0};
     sendbuffer.Start=0x0D00;
-    sendbuffer.datatype=MessageType::STRING_MSG;
+    sendbuffer.MessageType=MessageType::STRING_MSG;
     sendbuffer.DataID=processor.fcount;
 
     size_t firstPartSize = processor.summary[0][processor.fcount].size();
@@ -256,11 +259,11 @@ void reportsummary(int clientSocket, FrameProcessor processor){
 
     // Ensure message.Data is large enough to hold both parts
     // This check should be adjusted according to the actual size of message.Data
-    if (message.DataSize >= firstPartSize + secondPartSize) {
+    if (10218 >= firstPartSize + secondPartSize) {
         // Copy the first part
-        memcpy(message.Data, processor.summary[0][processor.fcount].data(), firstPartSize);
+        memcpy(sendbuffer.Data, processor.summary[0][processor.fcount].data(), firstPartSize);
         // Copy the second part, starting right after the first
-        memcpy(message.Data + firstPartSize, processor.summary[1][processor.fcount].data(), secondPartSize);
+        memcpy(sendbuffer.Data + firstPartSize, processor.summary[1][processor.fcount].data(), secondPartSize);
     } 
     else{
         std::cout<<"Msg too large"<<std::endl;

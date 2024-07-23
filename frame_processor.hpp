@@ -26,9 +26,12 @@ public:
     int max_missed_frames;
     cv::Mat cameraMatrix;
     cv::Mat distCoeffs;
+    void setCameraMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs);
 
 private:
     cv::Mat result_img;
+
 };
+
 
 #endif // FRAME_PROCESSOR_HPP
