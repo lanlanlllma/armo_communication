@@ -49,6 +49,26 @@ private:
     int beta_;
 };
 
+cv::Mat rotationMatrixToEulerAnglesMat(const cv::Mat &R) {
+    float sy = std::sqrt(R.at<double>(0, 0) * R.at<double>(0, 0) + R.at<double>(1, 0) * R.at<double>(1, 0));
+    
+    bool singular = sy < 1e-6; // 如果 sy 接近于零，则矩阵接近奇异
+    
+    float x, y, z;
+    if (!singular) {
+        x = std::atan2(R.at<double>(2, 1), R.at<double>(2, 2));
+        y = std::atan2(-R.at<double>(2, 0), sy);
+        z = std::atan2(R.at<double>(1, 0), R.at<double>(0, 0));
+    } else {
+        x = std::atan2(-R.at<double>(1, 2), R.at<double>(1, 1));
+        y = std::atan2(-R.at<double>(2, 0), sy);
+        z = 0;
+    }
+
+    cv::Mat eulerAngles = (cv::Mat_<double>(3, 1) << x, y, z);
+    return eulerAngles;
+}
+
 void adjustBrightnessContrast(const Mat &src, Mat &dst, double alpha, int beta)
 {
     dst = Mat::zeros(src.size(), src.type());
@@ -250,10 +270,13 @@ void processArmorDetection(const cv::Mat &img, std::vector<cv::Mat> &tvec, std::
         cv::Mat t_rvec;
 
         solvePnP(SMALL_ARMOR_POINTS, armorPoints, cameraMatrix, distCoeffs, t_rvec, t_tvec);
+        cv::Mat rotationMatrix;
+        cv::Rodrigues(t_rvec, rotationMatrix);
+        cv::Mat eulerAngles = rotationMatrixToEulerAnglesMat(rotationMatrix);
         // std::cout << "rvec: " << t_rvec << std::endl;
         // std::cout << "tvec: " << t_tvec << std::endl;
         tvec.push_back(t_tvec);
-        rvec.push_back(t_rvec);
+        rvec.push_back(eulerAngles);
 
         Armor temp_armor;
         temp_armor.left_light.top = armorPoints[1];

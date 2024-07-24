@@ -27,5 +27,6 @@ const std::vector<std::string> ignore_classes={"outpost","guard","base"};
 void adjustBrightnessContrast(const Mat& src, Mat& dst, double alpha, int beta);
 void processImage(const Mat& img, Mat& drawing, std::vector<Point2f>& armorPoints);
 void processArmorDetection(const cv::Mat &img, std::vector<cv::Mat> &tvec, std::vector<cv::Mat> &rvec, std::vector<std::string> &result,cv::Mat cameraMatrix,cv::Mat distCoeffs);
+cv::Mat rotationMatrixToEulerAnglesMat(const cv::Mat &R);
 
 #endif // ARMOR_DETECTION_HPP
