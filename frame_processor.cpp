@@ -138,6 +138,8 @@ void FrameProcessor::setTransform(double camtranslation[] , double camrotation[]
     Qgim.y=gimrotation[2];
     Qgim.z=gimrotation[0];
     double camyaw,campitch,camroll;
+    std::cout<<camrotation[0]<<" "<<camrotation[1]<<" "<<camrotation[2]<<" "<<camrotation[3]<<std::endl;
+    std::cout<<Qcam.w<<" "<<Qcam.x<<" "<<Qcam.y<<" "<<Qcam.z<<std::endl;
     quaternionToEuler(Qcam,camyaw,campitch,camroll);
     double gimyaw,gimpitch,gimroll;
     quaternionToEuler(Qgim,gimyaw,gimpitch,gimroll);

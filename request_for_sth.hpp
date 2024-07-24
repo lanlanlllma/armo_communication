@@ -204,8 +204,8 @@ void getTransform(int clientSocket, std::string from, std::string to, double tra
     sendbuffer.Offset=0;
     sendbuffer.End=0x0721;
     encode_and_send(clientSocket,sendbuffer);
-    std::cout<<"sent"<<std::endl;
 
+    std::cout<<"sent"<<std::endl;
     std::vector<unsigned char> completeMessageBuffer;
     while (true) {
         unsigned char recvBuffer[10240] = {0};
@@ -272,8 +272,9 @@ void reportsummary(int clientSocket, FrameProcessor processor){
     // transfer msg into string
     std::string result_msg;
     auto i=processor.summary[0][processor.fcount-1];
-    if(i[0]==0)
+    if(i[0]==0||std::to_string(i[0])=="-nan")
     return;
+        std::cout<<"i[0]"<<std::to_string(i[0])<<std::endl;
         result_msg+="Armor center: x: "
         +std::to_string(i[0])
         +" y: "
