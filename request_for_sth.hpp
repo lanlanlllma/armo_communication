@@ -249,11 +249,11 @@ void reportsummary(int clientSocket, FrameProcessor processor){
         +std::to_string(i[1])
         +" z:"
         +std::to_string(i[2])
-        +"yaw: "
+        +" roll: "
         +std::to_string(i[3])
         +" pitch: "
         +std::to_string(i[4])
-        +" roll: "
+        +" yaw: "
         +std::to_string(i[5]) 
         +"\n";
     auto j=processor.summary[1][processor.fcount-1];
