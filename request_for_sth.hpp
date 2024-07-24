@@ -25,7 +25,7 @@ struct MessageBuffer {
     unsigned int DataTotalLength;
     unsigned int Offset;
     unsigned int DataLength;
-    unsigned char Data[10218];
+    unsigned char Data[10218]={0};
     unsigned short End;                       // 0x0721
 };
 
@@ -160,17 +160,32 @@ void getCamInfo(int clientSocket,FrameProcessor processor){
             completeMessageBuffer.clear();
         if (receivedMessage.MessageType == CAMERA_INFO) {
             CameraInfoData cameraInfo;
+            cv::Mat cameramatrix= cv::Mat(3, 3, CV_64F, cameraMatrix);
+            cv::Mat distcoeffs= cv::Mat(1, 5, CV_64F, distCoeffs);
             std::memcpy(&cameraInfo, receivedMessage.Data, receivedMessage.DataLength);
             std::memcpy(cameraMatrix, cameraInfo.CameraMatrix, sizeof(cameraInfo.CameraMatrix));
             std::memcpy(distCoeffs, cameraInfo.DistortionCoefficients, sizeof(cameraInfo.DistortionCoefficients));
-            std::cout << "Received camera info." << std::endl;
+            // std::cout << "Received camera info." << std::endl;
+            // std::cout<<"Camera matrix: "<<std::endl;
+            for(int i=0;i<3;i++){
+                for(int j=0;j<3;j++){
+                    // std::cout<<cameraMatrix[i*3+j]<<" ";
+                    processor.cameraMatrix.at<double>(i,j)=cameraMatrix[i*3+j];
+                }
+                std::cout<<std::endl;
+            }
+            // std::cout<<"Distortion coefficients: ";
+            for(int i=0;i<5;i++){
+                // std::cout<<distCoeffs[i]<<" ";
+                processor.distCoeffs.at<double>(0,i)=distCoeffs[i];
+            }
+            
+            // processor.setCameraMatrix(cameramatrix,distcoeffs);
             return;
         }
         }
         // put into mat
-        cv::Mat cameramatrix= cv::Mat(3, 3, CV_64F, cameraMatrix);
-        cv::Mat distcoeffs= cv::Mat(1, 5, CV_64F, distCoeffs);
-        processor.setCameraMatrix(cameramatrix,distcoeffs);
+        
     }
 }
 
@@ -189,6 +204,7 @@ void getTransform(int clientSocket, std::string from, std::string to, double tra
     sendbuffer.Offset=0;
     sendbuffer.End=0x0721;
     encode_and_send(clientSocket,sendbuffer);
+    std::cout<<"sent"<<std::endl;
 
     std::vector<unsigned char> completeMessageBuffer;
     while (true) {
@@ -207,42 +223,57 @@ void getTransform(int clientSocket, std::string from, std::string to, double tra
             close(clientSocket);
             break;
         }
-        while(true){
-            completeMessageBuffer.insert(completeMessageBuffer.end(), recvBuffer, recvBuffer + bytesRead);
-            // std::cout<<"Received "<<bytesRead<<" bytes."<<std::endl;
-            // std::cout<<"Buffer size: "<<completeMessageBuffer.size()<<std::endl;
-            // std::cout<<"Message size: "<<sizeof(MessageBuffer)<<std::endl;
 
-            while (completeMessageBuffer.size() >= sizeof(MessageBuffer)) {
-                MessageBuffer receivedMessage;
-                deserializeMessage(completeMessageBuffer.data(), receivedMessage);
+        completeMessageBuffer.insert(completeMessageBuffer.end(), recvBuffer, recvBuffer + bytesRead);
+        // std::cout<<"Received "<<bytesRead<<" bytes."<<std::endl;
+        // std::cout<<"Buffer size: "<<completeMessageBuffer.size()<<std::endl;
+        // std::cout<<"Message size: "<<sizeof(MessageBuffer)<<std::endl;
 
-                size_t messageSize = sizeof(MessageBuffer) - sizeof(receivedMessage.Data) + receivedMessage.DataLength;
-                if (completeMessageBuffer.size() < messageSize) {
-                    break;
-                }
+        while (completeMessageBuffer.size() >= sizeof(MessageBuffer)) {
+            MessageBuffer receivedMessage;
+            deserializeMessage(completeMessageBuffer.data(), receivedMessage);
 
-                completeMessageBuffer.clear();
-                if (receivedMessage.MessageType==TRANSFORM){
-                    TransformData transform;
-                    std::memcpy(&transform, receivedMessage.Data, receivedMessage.DataLength);
-                    std::memcpy(translation, transform.Translation, sizeof(transform.Translation));
-                    std::memcpy(rotation, transform.Rotation, sizeof(transform.Rotation));
-                    return;
-                }
-                else if (receivedMessage.MessageType == STRING_MSG) {
-                    std::string str = app.handle_string_msg(receivedMessage);
-                    std::cout << "Received string message: " << str << std::endl;
-                }
+            size_t messageSize = sizeof(MessageBuffer) - sizeof(receivedMessage.Data) + receivedMessage.DataLength;
+            if (completeMessageBuffer.size() < messageSize) {
+                break;
             }
+
+            completeMessageBuffer.clear();
+            if (receivedMessage.MessageType==TRANSFORM){
+                std::cout<<"recived"<<std::endl;
+                TransformData transform;
+                std::memcpy(&transform, receivedMessage.Data, receivedMessage.DataLength);
+                std::memcpy(translation, transform.Translation, sizeof(transform.Translation));
+                std::memcpy(rotation, transform.Rotation, sizeof(transform.Rotation));
+                std::cout << "Translation: ";
+                for (double t : transform.Translation) {
+                    std::cout << t << " ";
+                }
+                std::cout << std::endl;
+
+                std::cout << "Rotation: ";
+                for (double r : transform.Rotation) {
+                    std::cout << r << " ";
+                }
+                std::cout << std::endl;
+                return;
+            }
+                // else if (receivedMessage.MessageType == STRING_MSG) {
+                // std::string str = app.handle_string_msg(receivedMessage);
+                // if(!str.empty()){
+                //     std::cout << "Received string message: " << str << std::endl;
+                // }
         }
-    }
+                
+   }
 }
 
 void reportsummary(int clientSocket, FrameProcessor processor){
     // transfer msg into string
     std::string result_msg;
     auto i=processor.summary[0][processor.fcount-1];
+    if(i[0]==0)
+    return;
         result_msg+="Armor center: x: "
         +std::to_string(i[0])
         +" y: "
@@ -254,8 +285,7 @@ void reportsummary(int clientSocket, FrameProcessor processor){
         +" pitch: "
         +std::to_string(i[4])
         +" yaw: "
-        +std::to_string(i[5]) 
-        +"\n";
+        +std::to_string(i[5]);
     auto j=processor.summary[1][processor.fcount-1];
         result_msg+="Car center: x: "
         +std::to_string(j[0])

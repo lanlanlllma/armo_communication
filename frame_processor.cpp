@@ -1,6 +1,7 @@
 #include "frame_processor.hpp"
 #include "armor_detection.hpp"
 #include <iostream>
+#include "Quaternion.hpp"
 
 // Other necessary includes
 
@@ -11,8 +12,8 @@ FrameProcessor::FrameProcessor()
       fcount(0),
       missed_frames(0),
       max_missed_frames(3), // Set the number of frames to allow predictions
-      cameraMatrix(cv::Mat::zeros(3,3,CV_16F)),
-      distCoeffs(cv::Mat::zeros(1,5,CV_16F))
+      cameraMatrix(cv::Mat::zeros(3,3,CV_64F)),
+      distCoeffs(cv::Mat::zeros(1,5,CV_64F))
 
 {
     result_img = cv::Mat::zeros(720, 1280, CV_8UC3);
@@ -126,5 +127,19 @@ void FrameProcessor::setCameraMatrix(cv::Mat cameraMatrix, cv::Mat distCoeffs) {
 }
 
 void FrameProcessor::setTransform(double camtranslation[] , double camrotation[],double gimtranslation[] , double gimrotation[]){
-    transform_array = Transform(gimtranslation[0], gimtranslation[1], gimtranslation[2], camrotation[2],camrotation[0],camtranslation[0]);
+    Quaternion Qcam;
+    Qcam.w=camrotation[3];
+    Qcam.x=camrotation[1];
+    Qcam.y=camrotation[2];
+    Qcam.z=camrotation[0];
+    Quaternion Qgim;
+    Qgim.w=gimrotation[3];
+    Qgim.x=gimrotation[1];
+    Qgim.y=gimrotation[2];
+    Qgim.z=gimrotation[0];
+    double camyaw,campitch,camroll;
+    quaternionToEuler(Qcam,camyaw,campitch,camroll);
+    double gimyaw,gimpitch,gimroll;
+    quaternionToEuler(Qgim,gimyaw,gimpitch,gimroll);
+    transform_array = Transform(gimyaw,gimpitch,gimyaw, camroll,camyaw,camtranslation[0]);
 }

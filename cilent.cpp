@@ -63,64 +63,73 @@ int main() {
     sockaddr_in camseverAddress{};
     sockaddr_in transformAddress{};
     sockaddr_in reportAddress{};
-    const char* serverIP = "10.2.20.55";
+    const char* serverIP = "10.2.20.66";
     camseverAddress.sin_family = AF_INET;
     transformAddress.sin_family = AF_INET;
     reportAddress.sin_family = AF_INET;
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(8000);  // Replace with the actual server port
-    camseverAddress.sin_port = htons(8001);
-    transformAddress.sin_port = htons(8002);
+    camseverAddress.sin_port = htons(5140);
+    transformAddress.sin_port = htons(4399);
     reportAddress.sin_port = htons(8003);
     if (inet_pton(AF_INET, serverIP, &(serverAddress.sin_addr)) <= 0) {
         std::cerr << "Invalid address/Address not supported." << std::endl;
         close(clientSocket);
         return 1;
     }
-    // if (inet_pton(AF_INET, serverIP, &(camseverAddress.sin_addr)) <= 0) {
-    //     std::cerr << "Invalid address/Address not supported." << std::endl;
-    //     close(camclientSocket);
-    //     return 1;
-    // }
-    // if (inet_pton(AF_INET, serverIP, &(transformAddress.sin_addr)) <= 0) {
-    //     std::cerr << "Invalid address/Address not supported." << std::endl;
-    //     close(transformclientSocket);
-    //     return 1;
-    // }
+    if (inet_pton(AF_INET, serverIP, &(camseverAddress.sin_addr)) <= 0) {
+        std::cerr << "Invalid address/Address not supported." << std::endl;
+        close(camclientSocket);
+        return 1;
+    }
+    if (inet_pton(AF_INET, serverIP, &(transformAddress.sin_addr)) <= 0) {
+        std::cerr << "Invalid address/Address not supported." << std::endl;
+        close(transformclientSocket);
+        return 1;
+    }
     // if (inet_pton(AF_INET, serverIP, &(reportAddress.sin_addr)) <= 0) {
     //     std::cerr << "Invalid address/Address not supported." << std::endl;
     //     close(reportclientSocket);
     //     return 1;
     // }
-    // // connect to caminfo
-    // if (connect(camclientSocket, (struct sockaddr*)&camseverAddress, sizeof(camseverAddress)) < 0) {
-    //     std::cerr << "Connection failed." << std::endl;
-    //     close(camclientSocket);
-    //     return 1;
-    // }
-    // else{
-    //     std::cout<<"Connected to caminfo."<<std::endl;
-    // }
-    // getCamInfo(camclientSocket,processor);
-    // close(camclientSocket);
+    // connect to caminfo
+    if (connect(camclientSocket, (struct sockaddr*)&camseverAddress, sizeof(camseverAddress)) < 0) {
+        std::cerr << "Connection failed." << std::endl;
+        close(camclientSocket);
+        return 1;
+    }
+    else{
+        std::cout<<"Connected to caminfo."<<std::endl;
+    }
+    getCamInfo(camclientSocket,processor);
+    // show result
+    std::cout<<"cameramatrix: "<<processor.cameraMatrix<<std::endl;
+    std::cout<<"distCoeffs: "<<processor.distCoeffs<<std::endl;
+    close(camclientSocket);
 
-    // // connect to transform
-    // if (connect(transformclientSocket, (struct sockaddr*)&transformAddress, sizeof(transformAddress)) < 0) {
-    //     std::cerr << "Connection failed." << std::endl;
-    //     close(transformclientSocket);
-    //     return 1;
-    // }
-    // else{
-    //     std::cout<<"Connected to transform."<<std::endl;
-    // }
-    // double camtranslation[3];
-    // double camrotation[3];
-    // double gimtranslation[3];
-    // double gimrotation[3];
-    // getTransform(transformclientSocket,"Gimbal","Camera",camtranslation,camrotation,app);
-    // getTransform(transformclientSocket,"Odom","Gimbal",gimtranslation,gimrotation,app);
-    // close(transformclientSocket);
-    // processor.setTransform(camtranslation,camrotation,gimtranslation,gimrotation);
+    // connect to transform
+    if (connect(transformclientSocket, (struct sockaddr*)&transformAddress, sizeof(transformAddress)) < 0) {
+        std::cerr << "Connection failed." << std::endl;
+        close(transformclientSocket);
+        return 1;
+    }
+    else{
+        std::cout<<"Connected to transform."<<std::endl;
+    }
+    double camtranslation[3];
+    double camrotation[3];
+    double gimtranslation[3];
+    double gimrotation[3];
+    getTransform(transformclientSocket,"Odom","Gimbal",gimtranslation,gimrotation,app);
+    getTransform(transformclientSocket,"Gimbal","Camera",camtranslation,camrotation,app);
+
+    close(transformclientSocket);
+    processor.setTransform(camtranslation,camrotation,gimtranslation,gimrotation);
+    // show result
+    std::cout<<"camtranslation: "<<camtranslation[0]<<" "<<camtranslation[1]<<" "<<camtranslation[2]<<std::endl;
+    std::cout<<"camrotation: "<<camrotation[0]<<" "<<camrotation[1]<<" "<<camrotation[2]<<std::endl;
+    std::cout<<"gimtranslation: "<<gimtranslation[0]<<" "<<gimtranslation[1]<<" "<<gimtranslation[2]<<std::endl;
+    std::cout<<"gimrotation: "<<gimrotation[0]<<" "<<gimrotation[1]<<" "<<gimrotation[2]<<std::endl;
     // // connect to report
     // if (connect(reportclientSocket, (struct sockaddr*)&reportAddress, sizeof(reportAddress)) < 0) {
     //     std::cerr << "Connection failed." << std::endl;
