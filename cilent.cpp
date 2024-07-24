@@ -19,6 +19,11 @@ cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& Fra
         std::string cnt=std::to_string(buffer.DataID);
         cnt.append(".jpg");
         // cv::imwrite(cnt,img);
+        std::string path;
+        path="./";
+        path.append(cnt);
+        // cv::imwrite(path,img);
+        cv::imshow("Image", img);
         FrameProcessor.processFrame(img);
         std::cout<<"Saved "<<cnt<<std::endl;
         delete[] data;
@@ -58,7 +63,7 @@ int main() {
     sockaddr_in camseverAddress{};
     sockaddr_in transformAddress{};
     sockaddr_in reportAddress{};
-    const char* serverIP = "10.2.20.66";
+    const char* serverIP = "10.2.20.55";
     camseverAddress.sin_family = AF_INET;
     transformAddress.sin_family = AF_INET;
     reportAddress.sin_family = AF_INET;
@@ -72,59 +77,59 @@ int main() {
         close(clientSocket);
         return 1;
     }
-    if (inet_pton(AF_INET, serverIP, &(camseverAddress.sin_addr)) <= 0) {
-        std::cerr << "Invalid address/Address not supported." << std::endl;
-        close(camclientSocket);
-        return 1;
-    }
-    if (inet_pton(AF_INET, serverIP, &(transformAddress.sin_addr)) <= 0) {
-        std::cerr << "Invalid address/Address not supported." << std::endl;
-        close(transformclientSocket);
-        return 1;
-    }
-    if (inet_pton(AF_INET, serverIP, &(reportAddress.sin_addr)) <= 0) {
-        std::cerr << "Invalid address/Address not supported." << std::endl;
-        close(reportclientSocket);
-        return 1;
-    }
-    // connect to caminfo
-    if (connect(camclientSocket, (struct sockaddr*)&camseverAddress, sizeof(camseverAddress)) < 0) {
-        std::cerr << "Connection failed." << std::endl;
-        close(camclientSocket);
-        return 1;
-    }
-    else{
-        std::cout<<"Connected to caminfo."<<std::endl;
-    }
-    getCamInfo(camclientSocket,processor);
-    close(camclientSocket);
+    // if (inet_pton(AF_INET, serverIP, &(camseverAddress.sin_addr)) <= 0) {
+    //     std::cerr << "Invalid address/Address not supported." << std::endl;
+    //     close(camclientSocket);
+    //     return 1;
+    // }
+    // if (inet_pton(AF_INET, serverIP, &(transformAddress.sin_addr)) <= 0) {
+    //     std::cerr << "Invalid address/Address not supported." << std::endl;
+    //     close(transformclientSocket);
+    //     return 1;
+    // }
+    // if (inet_pton(AF_INET, serverIP, &(reportAddress.sin_addr)) <= 0) {
+    //     std::cerr << "Invalid address/Address not supported." << std::endl;
+    //     close(reportclientSocket);
+    //     return 1;
+    // }
+    // // connect to caminfo
+    // if (connect(camclientSocket, (struct sockaddr*)&camseverAddress, sizeof(camseverAddress)) < 0) {
+    //     std::cerr << "Connection failed." << std::endl;
+    //     close(camclientSocket);
+    //     return 1;
+    // }
+    // else{
+    //     std::cout<<"Connected to caminfo."<<std::endl;
+    // }
+    // getCamInfo(camclientSocket,processor);
+    // close(camclientSocket);
 
-    // connect to transform
-    if (connect(transformclientSocket, (struct sockaddr*)&transformAddress, sizeof(transformAddress)) < 0) {
-        std::cerr << "Connection failed." << std::endl;
-        close(transformclientSocket);
-        return 1;
-    }
-    else{
-        std::cout<<"Connected to transform."<<std::endl;
-    }
-    double camtranslation[3];
-    double camrotation[3];
-    double gimtranslation[3];
-    double gimrotation[3];
-    getTransform(transformclientSocket,"Gimbal","Camera",camtranslation,camrotation,app);
-    getTransform(transformclientSocket,"Odom","Gimbal",gimtranslation,gimrotation,app);
-    close(transformclientSocket);
-    processor.setTransform(camtranslation,camrotation,gimtranslation,gimrotation);
-    // connect to report
-    if (connect(reportclientSocket, (struct sockaddr*)&reportAddress, sizeof(reportAddress)) < 0) {
-        std::cerr << "Connection failed." << std::endl;
-        close(reportclientSocket);
-        return 1;
-    }
-    else{
-        std::cout<<"Connected to report."<<std::endl;
-    }
+    // // connect to transform
+    // if (connect(transformclientSocket, (struct sockaddr*)&transformAddress, sizeof(transformAddress)) < 0) {
+    //     std::cerr << "Connection failed." << std::endl;
+    //     close(transformclientSocket);
+    //     return 1;
+    // }
+    // else{
+    //     std::cout<<"Connected to transform."<<std::endl;
+    // }
+    // double camtranslation[3];
+    // double camrotation[3];
+    // double gimtranslation[3];
+    // double gimrotation[3];
+    // getTransform(transformclientSocket,"Gimbal","Camera",camtranslation,camrotation,app);
+    // getTransform(transformclientSocket,"Odom","Gimbal",gimtranslation,gimrotation,app);
+    // close(transformclientSocket);
+    // processor.setTransform(camtranslation,camrotation,gimtranslation,gimrotation);
+    // // connect to report
+    // if (connect(reportclientSocket, (struct sockaddr*)&reportAddress, sizeof(reportAddress)) < 0) {
+    //     std::cerr << "Connection failed." << std::endl;
+    //     close(reportclientSocket);
+    //     return 1;
+    // }
+    // else{
+    //     std::cout<<"Connected to report."<<std::endl;
+    // }
     // Connect to the server
     if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
         std::cerr << "Connection failed." << std::endl;
@@ -176,7 +181,7 @@ int main() {
                 cv::Mat img = app.handle_image_msg(receivedMessage, processor,clientSocket);
                 if (!img.empty()) {
                     // cv::imshow("Image", img);
-                    reportsummary(reportclientSocket,processor);
+                    reportsummary(clientSocket,processor);
                     cv::waitKey(1);
                 }
             } 

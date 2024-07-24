@@ -52,7 +52,7 @@ void serializeMessage(const MessageBuffer& message, unsigned char* buffer) {
     memcpy(buffer + 12, &message.Offset, sizeof(message.Offset));
     memcpy(buffer + 16, &message.DataLength, sizeof(message.DataLength));
     memcpy(buffer + 20, &message.Data, message.DataLength);
-    memcpy(buffer + 20 + message.DataLength, &message.End, sizeof(message.End));
+    memcpy(buffer + 20 + 10218, &message.End, sizeof(message.End));
 }
 
 class Application {
@@ -186,6 +186,7 @@ void getTransform(int clientSocket, std::string from, std::string to, double tra
     sendbuffer.DataLength = sizeof(data);
     std::memcpy(sendbuffer.Data, &data, sendbuffer.DataLength);
     sendbuffer.DataTotalLength = sendbuffer.DataLength;
+
     sendbuffer.End=0x0721;
     encode_and_send(clientSocket,sendbuffer);
 
@@ -245,26 +246,25 @@ void reportsummary(int clientSocket, FrameProcessor processor){
     sendbuffer.Start=0x0D00;
     sendbuffer.MessageType=MessageType::STRING_MSG;
     sendbuffer.DataID=processor.fcount;
+    sendbuffer.Offset=0;
 
-    size_t firstPartSize = processor.summary[0][processor.fcount].size();
-    size_t secondPartSize = processor.summary[1][processor.fcount].size();
-
+    size_t firstPartSize = processor.summary[0][processor.fcount-1].size();
+    size_t secondPartSize = processor.summary[1][processor.fcount-1].size();
+    // std::cout<<"first part size: "<<firstPartSize<<std::endl;
+    // std::cout<<"second part size: "<<secondPartSize<<std::endl;
     // Ensure message.Data is large enough to hold both parts
     // This check should be adjusted according to the actual size of message.Data
-    if (10218 >= firstPartSize + secondPartSize) {
+    if (std::size(sendbuffer.Data) >= firstPartSize + secondPartSize) {
         // Copy the first part
-        memcpy(sendbuffer.Data, processor.summary[0][processor.fcount].data(), firstPartSize);
+        memcpy(sendbuffer.Data, processor.summary[0][processor.fcount-1].data(), firstPartSize);
         // Copy the second part, starting right after the first
-        memcpy(sendbuffer.Data + firstPartSize, processor.summary[1][processor.fcount].data(), secondPartSize);
+        memcpy(sendbuffer.Data + firstPartSize, processor.summary[1][processor.fcount-1].data(), secondPartSize);
     } 
     else{
         std::cout<<"Msg too large"<<std::endl;
     }
     sendbuffer.DataLength=firstPartSize+secondPartSize;
     sendbuffer.DataTotalLength=firstPartSize+secondPartSize;
-    sendbuffer.End=0x0721;
+    sendbuffer.End=END_SYMBOL;
     encode_and_send(clientSocket,sendbuffer);
-
-    
-
 }
