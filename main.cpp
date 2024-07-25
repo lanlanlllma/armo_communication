@@ -127,9 +127,9 @@ int main() {
     processor.setTransform(camtranslation,camrotation,gimtranslation,gimrotation);
     // show result
     std::cout<<"camtranslation: "<<camtranslation[0]<<" "<<camtranslation[1]<<" "<<camtranslation[2]<<std::endl;
-    std::cout<<"camrotation: "<<camrotation[0]<<" "<<camrotation[1]<<" "<<camrotation[2]<<std::endl;
-    std::cout<<"gimtranslation: "<<gimtranslation[0]<<" "<<gimtranslation[1]<<" "<<gimtranslation[2]<<std::endl;
-    std::cout<<"gimrotation: "<<gimrotation[0]<<" "<<gimrotation[1]<<" "<<gimrotation[2]<<std::endl;
+    std::cout<<"camrotation: "<<processor.transform_array.roll_camera<<" "<<processor.transform_array.yaw_camera<<" "<<processor.transform_array.pitch_gimbal<<std::endl;
+    // std::cout<<"gimtranslation: "<<gimtranslation[0]<<" "<<gimtranslation[1]<<" "<<gimtranslation[2]<<std::endl;
+    // std::cout<<"gimrotation: "<<gimrotation[0]<<" "<<gimrotation[1]<<" "<<gimrotation[2]<<std::endl;
     // // connect to report
     // if (connect(reportclientSocket, (struct sockaddr*)&reportAddress, sizeof(reportAddress)) < 0) {
     //     std::cerr << "Connection failed." << std::endl;

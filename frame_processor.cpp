@@ -143,5 +143,5 @@ void FrameProcessor::setTransform(double camtranslation[] , double camrotation[]
     quaternionToEuler(Qcam,camyaw,campitch,camroll);
     double gimyaw,gimpitch,gimroll;
     quaternionToEuler(Qgim,gimyaw,gimpitch,gimroll);
-    transform_array = Transform(gimyaw,gimpitch,gimyaw, camroll,camyaw,camtranslation[0]);
+    transform_array = Transform(gimyaw,gimpitch,gimyaw,camroll,-camyaw,camtranslation[0]);
 }
