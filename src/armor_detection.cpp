@@ -1,8 +1,8 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include "armor_detection.hpp"
-#include "number_classifier.hpp"
-#include "armor.hpp"
+#include "../include/armor_detection.hpp"
+#include "../include/number_classifier.hpp"
+#include "../include/armor.hpp"
 #include <omp.h>
 using namespace cv;
 using namespace armor;

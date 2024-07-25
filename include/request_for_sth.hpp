@@ -7,7 +7,7 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <unordered_map>
-#include "frame_processor.hpp"
+#include "../include/frame_processor.hpp"
 
 enum MessageType {
     STRING_MSG = 0x0000,
@@ -293,7 +293,8 @@ void reportsummary(int clientSocket, FrameProcessor processor){
         +" y: "
         +std::to_string(j[1])
         +" z:"
-        +std::to_string(j[2]);
+        +std::to_string(j[2])
+        +"\0";
     
     
     // construct msgbuffer to send

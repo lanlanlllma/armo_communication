@@ -1,6 +1,6 @@
 #include <iostream>
 #include <Eigen/Dense>
-#include "kalman.hpp"
+#include "../include/kalman.hpp"
 
 Eigen::VectorXd f(const Eigen::VectorXd &x) {
     Eigen::VectorXd x_new = x;

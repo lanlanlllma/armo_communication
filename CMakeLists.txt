@@ -15,12 +15,12 @@ include_directories(${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
 # 指定源文件
 set(SOURCES
     main.cpp
-    frame_processor.cpp
-    armor_detection.cpp
-    armor.cpp
-    number_classifier.cpp
-    Quaternion.cpp
-    kalman.cpp
+    ./src/frame_processor.cpp
+    ./src/armor_detection.cpp
+    ./src/armor.cpp
+    ./src/number_classifier.cpp
+    ./src/Quaternion.cpp
+    ./src/kalman.cpp
 )
 
 # 生成可执行文件

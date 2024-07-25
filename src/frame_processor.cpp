@@ -1,7 +1,7 @@
-#include "frame_processor.hpp"
-#include "armor_detection.hpp"
+#include "../include/frame_processor.hpp"
+#include "../include/armor_detection.hpp"
 #include <iostream>
-#include "Quaternion.hpp"
+#include "../include/Quaternion.hpp"
 
 // Other necessary includes
 

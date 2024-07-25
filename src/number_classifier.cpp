@@ -1,7 +1,7 @@
 #include <fstream>
 
-#include "number_classifier.hpp"
-#include "armor.hpp"
+#include "../include/number_classifier.hpp"
+#include "../include/armor.hpp"
 #include <opencv2/opencv.hpp>
 
 namespace armor

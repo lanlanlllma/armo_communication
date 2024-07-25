@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <string>
-#include "kalman.hpp"
+#include "../include/kalman.hpp"
 
 
 class FrameProcessor {

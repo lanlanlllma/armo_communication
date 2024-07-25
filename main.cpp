@@ -7,8 +7,8 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <unordered_map>
-#include "frame_processor.hpp"
-#include "request_for_sth.hpp"
+#include "include/frame_processor.hpp"
+#include "include/request_for_sth.hpp"
 
 
 cv::Mat Application::handle_image_msg(MessageBuffer& buffer, FrameProcessor& FrameProcessor,int cilentSocket) {
