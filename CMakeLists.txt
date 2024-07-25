@@ -14,7 +14,7 @@ include_directories(${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
 
 # 指定源文件
 set(SOURCES
-    main.cpp
+    ./src/main.cpp
     ./src/frame_processor.cpp
     ./src/armor_detection.cpp
     ./src/armor.cpp
