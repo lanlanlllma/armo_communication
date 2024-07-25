@@ -14,7 +14,7 @@ include_directories(${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
 
 # 指定源文件
 set(SOURCES
-    cilent.cpp
+    main.cpp
     frame_processor.cpp
     armor_detection.cpp
     armor.cpp
